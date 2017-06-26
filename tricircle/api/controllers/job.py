@@ -17,7 +17,6 @@ import six
 
 from oslo_log import log as logging
 from oslo_utils import timeutils
-from oslo_config import cfg
 
 from tricircle.common import constants
 import tricircle.common.context as t_context
@@ -219,7 +218,6 @@ class AsyncJobController(rest.RestController):
 
         try:
             jobs = db_api.paginate_list_jobs(context, filters, limit, marker)
-            # return {'jobs': [self._get_more_readable_job(job) for job in jobs]}
             return {'jobs': [job for job in jobs]}
         except Exception as e:
             LOG.exception('Failed to show all asynchronous jobs: '
@@ -280,7 +278,7 @@ class AsyncJobController(rest.RestController):
 
     # check limit for paginate query
     def _check_pagination_limit(self, limit):
-        pagination_max_limit = 2000 # cfg.CONF.pagination.pagination_max_limit
+        pagination_max_limit = 2000  # cfg.CONF.pagination.pagination_max_limit
 
         if not limit:
             valid_limit = pagination_max_limit
@@ -295,7 +293,8 @@ class AsyncJobController(rest.RestController):
             valid_limit = pagination_max_limit
             return valid_limit
 
-        valid_limit = pagination_max_limit if limit <= 0 or limit > pagination_max_limit else limit
+        valid_limit = pagination_max_limit \
+            if (limit <= 0 or limit > pagination_max_limit) else limit
         return valid_limit
 
     # map user input job status to job status stored in database

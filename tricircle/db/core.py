@@ -15,7 +15,6 @@
 
 
 import threading
-import six
 
 import sqlalchemy as sql
 from sqlalchemy.ext import declarative
@@ -25,9 +24,9 @@ from sqlalchemy.inspection import inspect
 from oslo_config import cfg
 import oslo_db.options as db_options
 import oslo_db.sqlalchemy.session as db_session
-from oslo_utils import strutils
 from oslo_db.sqlalchemy import utils as sa_utils
 from oslo_log import log as logging
+from oslo_utils import strutils
 
 from tricircle.common import exceptions
 
@@ -71,10 +70,9 @@ def _filter_query(model, query, filters):
     else:
         return query
 
-def _filter_query_with_union(query_jobs, query_logs, model_jobs, model_logs, filters):
-    """union async_job_logs and filter the query
-            :return: query
-            """
+
+def _filter_query_with_union(query_jobs, query_logs,
+                             model_jobs, model_logs, filters):
     filter_dict = {}
     if not filters:
         return query_jobs.union(query_logs)
@@ -85,7 +83,8 @@ def _filter_query_with_union(query_jobs, query_logs, model_jobs, model_logs, fil
             continue
 
         key = query_filter['key']
-        if key not in model_jobs.attributes or key not in model_logs.attributes:
+        if key not in model_jobs.attributes \
+                or key not in model_logs.attributes:
             continue
         if isinstance(inspect(model_jobs).columns[key].type, sql.Boolean):
             filter_dict[key] = strutils.bool_from_string(query_filter['value'])
@@ -98,6 +97,7 @@ def _filter_query_with_union(query_jobs, query_logs, model_jobs, model_logs, fil
         return query_jobs.union(query_logs)
     else:
         return query_jobs.union(query_logs)
+
 
 def _get_engine_facade():
     global _LOCK
@@ -166,7 +166,9 @@ def query_resource(context, model, filters, sorts):
         query = query.order_by(sort_dir_func(sort_key))
     return [obj.to_dict() for obj in query]
 
-def paginate_query_resource_with_union(context, model1, model2, filters, limit, marker, sorts):
+
+def paginate_query_resource_with_union(context, model1, model2,
+                                       filters, limit, marker, sorts):
     query_jobs = context.session.query(model1.id,
                                        model1.type,
                                        model1.timestamp,
@@ -177,8 +179,6 @@ def paginate_query_resource_with_union(context, model1, model2, filters, limit, 
                                        model2.timestamp,
                                        model2.resource_id,
                                        model2.project_id)
-
-    # query = _filter_query_with_union(query_jobs, query_logs, model1, model2, filters)
 
     query_jobs = _filter_query(model1, query_jobs, filters)
 
@@ -201,6 +201,7 @@ def paginate_query_resource_with_union(context, model1, model2, filters, limit, 
 
         # deal query result
     return [obj for obj in query]
+
 
 def update_resource(context, model, pk_value, update_dict):
     res_obj = _get_resource(context, model, pk_value)
