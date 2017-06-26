@@ -17,6 +17,7 @@ import six
 
 from oslo_log import log as logging
 from oslo_utils import timeutils
+from oslo_config import cfg
 
 from tricircle.common import constants
 import tricircle.common.context as t_context
@@ -207,15 +208,19 @@ class AsyncJobController(rest.RestController):
             })
             return utils.format_api_error(400, msg)
 
+        # check limit and marker
+        limit = filters.get('limit', None)
+        limit = self._check_pagination_limit(limit)
+        marker = filters.get('marker', None)
+
         filters = [{'key': key,
                     'comparator': 'eq',
                     'value': value} for key, value in six.iteritems(filters)]
 
         try:
-            jobs_in_job_table = db_api.list_jobs(context, filters)
-            jobs_in_job_log_table = db_api.list_jobs_from_log(context, filters)
-            jobs = jobs_in_job_table + jobs_in_job_log_table
-            return {'jobs': [self._get_more_readable_job(job) for job in jobs]}
+            jobs = db_api.paginate_list_jobs(context, filters, limit, marker)
+            # return {'jobs': [self._get_more_readable_job(job) for job in jobs]}
+            return {'jobs': [job for job in jobs]}
         except Exception as e:
             LOG.exception('Failed to show all asynchronous jobs: '
                           '%(exception)s ', {'exception': e})
@@ -228,6 +233,8 @@ class AsyncJobController(rest.RestController):
     # and extra id from job attributes. If job entry is from job log table,
     # only remove resource id from job attributes.
     def _get_more_readable_job(self, job):
+        if not job:
+            return None
         job_resource_map = constants.job_resource_map
 
         if 'status' in job:
@@ -270,6 +277,26 @@ class AsyncJobController(rest.RestController):
         if unsupported_filters:
             return False, unsupported_filters
         return True, filters
+
+    # check limit for paginate query
+    def _check_pagination_limit(self, limit):
+        pagination_max_limit = 2000 # cfg.CONF.pagination.pagination_max_limit
+
+        if not limit:
+            valid_limit = pagination_max_limit
+            return valid_limit
+
+        try:
+            limit = int(limit)
+        except(ValueError):
+            LOG.warn(_("Invalid value for limit: %s. It "
+                       "should be an integer greater to 0"),
+                     limit)
+            valid_limit = pagination_max_limit
+            return valid_limit
+
+        valid_limit = pagination_max_limit if limit <= 0 or limit > pagination_max_limit else limit
+        return valid_limit
 
     # map user input job status to job status stored in database
     def _get_job_status_in_db(self, job_status):

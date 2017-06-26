@@ -420,6 +420,12 @@ def list_jobs(context, filters=None, sorts=None):
                                    filters or [], sorts or [])
         return jobs
 
+def paginate_list_jobs(context, filters=None, limit=None, marker=None, sorts=None):
+    with context.session.begin():
+        # get all jobs from job table
+        jobs = core.paginate_query_resource_with_union(context, models.AsyncJob,
+                                                       models.AsyncJobLog, filters or [], limit, marker, sorts or [])
+        return jobs
 
 def list_jobs_from_log(context, filters=None, sorts=None):
     with context.session.begin():

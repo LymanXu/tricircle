@@ -145,7 +145,7 @@ job_status_map = {
 }
 
 # filter jobs according to the job's attributes
-JOB_LIST_SUPPORTED_FILTERS = ['project_id', 'type', 'status']
+JOB_LIST_SUPPORTED_FILTERS = ['project_id', 'type', 'status', 'limit', 'marker']
 
 # map job type to corresponding job handler
 job_handles = {
